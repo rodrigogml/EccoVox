@@ -28,13 +28,15 @@ class KokoroTtsEngineAdapter(TtsEngineAdapter):
             raise EccoVoxError(ErrorCodeEnum.UNSUPPORTED_AUDIO_FORMAT, "Requested TTS format is not supported.")
 
         try:
+            import numpy as np
             pipeline = KPipeline(lang_code=lang_code)
             generator = pipeline(request.input_text, voice=profile.voice, speed=profile.speed or 1.0)
             audio_chunks = [item[-1] for item in generator]
             if not audio_chunks:
                 raise EccoVoxError(ErrorCodeEnum.ENGINE_FUNCTIONAL_ERROR, "TTS engine returned no audio.")
+            audio = np.concatenate(audio_chunks) if len(audio_chunks) > 1 else audio_chunks[0]
             buffer = io.BytesIO()
-            sf.write(buffer, audio_chunks[0], 24000, format=response_format.upper())
+            sf.write(buffer, audio, 24000, format=response_format.upper())
         except EccoVoxError:
             raise
         except Exception as exc:
