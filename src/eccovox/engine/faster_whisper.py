@@ -28,7 +28,7 @@ class FasterWhisperSttEngineAdapter(SttEngineAdapter):
                 temp_file.write(request.audio)
                 temp_path = Path(temp_file.name)
             try:
-                segments, info = model.transcribe(str(temp_path), language=request.language, initial_prompt=request.prompt)
+                segments, info = model.transcribe(str(temp_path), language=_whisper_language(request.language), initial_prompt=request.prompt)
                 text = " ".join(segment.text.strip() for segment in segments).strip()
             finally:
                 temp_path.unlink(missing_ok=True)
@@ -42,3 +42,11 @@ class FasterWhisperSttEngineAdapter(SttEngineAdapter):
         language = getattr(info, "language", None) or request.language
         probability = getattr(info, "language_probability", None)
         return SttResult(text=text, language=language, confidence=probability, metadata={"engine": self.engine_name})
+
+
+def _whisper_language(language: str | None) -> str | None:
+    """Convert BCP 47 language tags to the base code accepted by faster-whisper."""
+
+    if language is None or not language.strip():
+        return None
+    return language.split("-", maxsplit=1)[0].lower()

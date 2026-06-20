@@ -7,8 +7,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+from eccovox.core.config import load_configuration
 from eccovox.core.errors import EccoVoxError, ErrorCodeEnum, to_error_payload
 from eccovox.core.models import CapabilityHealth, RuntimeHealth, SttRequest, TtsRequest
 from eccovox.core.runtime import SpeechRuntime
@@ -23,7 +24,7 @@ class SpeechRequestDTO(BaseModel):
     voice: str | None = None
     language: str | None = None
     profile: str | None = None
-    response_format: str | None = Field(default=None, alias="responseFormat")
+    responseFormat: str | None = None
     speed: float | None = None
 
     model_config = {"populate_by_name": True}
@@ -32,11 +33,15 @@ class SpeechRequestDTO(BaseModel):
 def runtime_from(request: Request) -> SpeechRuntime:
     """Return the runtime attached to the FastAPI app."""
 
-    return request.app.state.runtime
+    runtime = request.app.state.runtime
+    if runtime is None:
+        runtime = SpeechRuntime(load_configuration())
+        request.app.state.runtime = runtime
+    return runtime
 
 
 @router.get("/health")
-def health(request: Request) -> dict[str, object]:
+async def health(request: Request) -> dict[str, object]:
     """Return runtime health using the public camelCase contract."""
 
     return _runtime_health_to_dict(runtime_from(request).health())
@@ -82,7 +87,7 @@ async def transcribe(
 
 
 @router.post("/audio/speech")
-def synthesize(request: Request, payload: SpeechRequestDTO) -> Response:
+async def synthesize(request: Request, payload: SpeechRequestDTO) -> Response:
     """Synthesize text and return playable audio bytes."""
 
     try:
@@ -92,7 +97,7 @@ def synthesize(request: Request, payload: SpeechRequestDTO) -> Response:
                 voice=payload.voice,
                 language=payload.language,
                 profile=payload.profile,
-                response_format=payload.response_format,
+                response_format=payload.responseFormat,
                 speed=payload.speed,
             )
         )

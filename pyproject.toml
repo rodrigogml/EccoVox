@@ -9,7 +9,7 @@ authors = [
   { name = "RodrigoGML" }
 ]
 dependencies = [
-  "fastapi>=0.115.0",
+  "fastapi>=0.115.0,<0.116.0",
   "uvicorn>=0.34.0",
   "typer>=0.15.0",
   "python-multipart>=0.0.20"
@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx2>=0.28.0",
+  "httpx>=0.28.0",
   "pytest>=8.0.0"
 ]
 stt = [

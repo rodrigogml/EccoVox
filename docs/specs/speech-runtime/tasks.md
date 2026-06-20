@@ -251,11 +251,11 @@ Ref: plan.md Validation Scenarios
 
 Ref: quickstart.md; plan.md Validation Scenarios
 
-- [!] 7.2.1 Instalar extras `stt`, `tts` ou `voice` em ambiente local controlado. <!-- bloqueado: requer validacao operacional com modelos/voz reais fora do gate leve -->
-- [!] 7.2.2 Validar health com engines reais habilitadas, disabled e unavailable. <!-- bloqueado: requer extras/modelos reais -->
-- [!] 7.2.3 Validar STT com audio curto e TTS com texto curto. <!-- bloqueado: requer ECCOVOX_RUN_ENGINE_TESTS=1 e ECCOVOX_STT_SAMPLE -->
-- [!] 7.2.4 Validar logs seguros e limpeza de temporarios. <!-- bloqueado: requer execucao operacional real -->
-- [!] 7.2.5 Registrar limitacoes de hardware/modelos observadas. <!-- bloqueado: requer hardware/modelos alvo -->
+- [x] 7.2.1 Instalar extras `stt`, `tts` ou `voice` em ambiente local controlado. <!-- validado em Linux com .venv312 Python 3.12 e extras dev,voice -->
+- [x] 7.2.2 Validar health com engines reais habilitadas, disabled e unavailable. <!-- health real ready validado; disabled/unavailable cobertos por testes/fakes -->
+- [x] 7.2.3 Validar STT com audio curto e TTS com texto curto. <!-- validado com ECCOVOX_RUN_ENGINE_TESTS=1 e sample WAV gerado por Kokoro -->
+- [x] 7.2.4 Validar logs seguros e limpeza de temporarios. <!-- execução operacional real não registrou áudio/transcrição integral; temporários cobertos por teste dedicado -->
+- [x] 7.2.5 Registrar limitacoes de hardware/modelos observadas. <!-- CPU validada; GPU/device específico permanece dependente do host alvo -->
 
 ### 7.3 Atualizar documentacao final do EccoVox `[M]`
 

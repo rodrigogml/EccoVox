@@ -6,7 +6,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from eccovox.api.routes import router
-from eccovox.core.config import load_configuration
 from eccovox.core.errors import EccoVoxError, ErrorCodeEnum, to_error_payload
 from eccovox.core.runtime import SpeechRuntime
 
@@ -15,7 +14,7 @@ def create_app(runtime: SpeechRuntime | None = None) -> FastAPI:
     """Create the HTTP app with a configurable runtime instance."""
 
     app = FastAPI(title="EccoVox", version="0.1.0")
-    app.state.runtime = runtime or SpeechRuntime(load_configuration())
+    app.state.runtime = runtime
     app.include_router(router)
 
     @app.exception_handler(EccoVoxError)

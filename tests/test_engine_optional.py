@@ -26,7 +26,7 @@ def test_fasterWhisperAdapter_shouldExposeOperationalPath_whenEngineExtraIsAvail
         compute_type="int8",
     )
 
-    result = adapter.transcribe(SttRequest(audio=Path(sample_path).read_bytes()), profile)
+    result = adapter.transcribe(SttRequest(audio=Path(sample_path).read_bytes(), language="pt-BR"), profile)
 
     assert result.text
 
