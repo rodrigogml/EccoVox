@@ -152,12 +152,28 @@ def service_install() -> int:
         [str(VENV_PYTHON), "-m", "eccovox.windows_service", "--startup", "auto", "install"],
         cwd=ROOT,
     )
-    return result.returncode
+    if result.returncode or not service_exists():
+        raise RuntimeError("O serviço EccoVox não foi instalado; execute em um PowerShell elevado.")
+    return 0
 
 
 def service_remove() -> int:
     service_control("stop", check=False)
-    return subprocess.run([str(VENV_PYTHON), "-m", "eccovox.windows_service", "remove"], cwd=ROOT).returncode
+    result = subprocess.run([str(VENV_PYTHON), "-m", "eccovox.windows_service", "remove"], cwd=ROOT)
+    if result.returncode or service_exists():
+        raise RuntimeError("O serviço EccoVox não foi removido; execute em um PowerShell elevado.")
+    return 0
+
+
+def service_exists() -> bool:
+    if os.name != "nt":
+        return False
+    import psutil
+    try:
+        psutil.win_service_get("EccoVox").as_dict()
+        return True
+    except psutil.NoSuchProcess:
+        return False
 
 
 def service_control(action: str, check: bool = True) -> int:
