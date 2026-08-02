@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import io
+from importlib.util import find_spec
 
 from eccovox.core.errors import EccoVoxError, ErrorCodeEnum
-from eccovox.core.models import RuntimeProfile, TtsRequest, TtsResult
+from eccovox.core.models import CapabilityHealth, CapabilityStatusEnum, RuntimeProfile, TtsRequest, TtsResult
 from eccovox.engine.base import TtsEngineAdapter
 
 
@@ -13,6 +14,16 @@ class KokoroTtsEngineAdapter(TtsEngineAdapter):
     """Adapter for Kokoro, loaded only when optional TTS dependencies are installed."""
 
     engine_name = "kokoro"
+
+    def health(self, profile: RuntimeProfile) -> CapabilityHealth:
+        if find_spec("kokoro") is None or find_spec("soundfile") is None:
+            return CapabilityHealth(
+                status=CapabilityStatusEnum.UNAVAILABLE,
+                engine=self.engine_name,
+                formats=self.supported_formats,
+                safe_message="Kokoro TTS extra is not installed.",
+            )
+        return super().health(profile)
 
     def synthesize(self, request: TtsRequest, profile: RuntimeProfile) -> TtsResult:
         try:

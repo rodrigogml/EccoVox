@@ -31,7 +31,7 @@ Set-Location C:\opt\EccoVox
 .\eccovox.ps1 status
 ```
 
-O instalador cria `.venv`, instala os extras `stt-gpu,service` e copia
+O instalador cria `.venv`, instala os extras `stt-gpu,tts,service` e copia
 `eccovox.toml.model` para `eccovox.toml` quando a configuração real ainda não
 existe. O arquivo real, modelos, logs e estado são ignorados pelo Git.
 

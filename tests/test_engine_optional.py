@@ -4,11 +4,21 @@ from pathlib import Path
 import pytest
 
 from eccovox.core.models import RuntimeProfile, CapabilityEnum, SttRequest, TtsRequest
+from eccovox.core.models import CapabilityStatusEnum
 from eccovox.engine.faster_whisper import FasterWhisperSttEngineAdapter
 from eccovox.engine.kokoro import KokoroTtsEngineAdapter
 
 
 RUN_ENGINE_TESTS = os.getenv("ECCOVOX_RUN_ENGINE_TESTS") == "1"
+
+
+def test_kokoroHealth_shouldReportUnavailable_whenExtraIsMissing(monkeypatch) -> None:
+    monkeypatch.setattr("eccovox.engine.kokoro.find_spec", lambda _name: None)
+    profile = RuntimeProfile(name="diagnostic", capability=CapabilityEnum.TTS, engine="kokoro")
+
+    health = KokoroTtsEngineAdapter().health(profile)
+
+    assert health.status == CapabilityStatusEnum.UNAVAILABLE
 
 
 @pytest.mark.skipif(not RUN_ENGINE_TESTS, reason="requires optional STT engine dependency and local model availability")

@@ -30,7 +30,7 @@ def main() -> int:
         "install", "start", "stop", "kill", "restart", "status", "run",
         "service-install", "service-remove", "service-start", "service-stop",
     ))
-    parser.add_argument("--extras", default="stt-gpu,service", help="Optional dependency groups used by install.")
+    parser.add_argument("--extras", default="stt-gpu,tts,service", help="Optional dependency groups used by install.")
     args = parser.parse_args()
     actions = {
         "install": lambda: install(args.extras),
