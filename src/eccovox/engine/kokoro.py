@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import io
 from importlib.util import find_spec
+import os
+from pathlib import Path
 
 from eccovox.core.errors import EccoVoxError, ErrorCodeEnum
 from eccovox.core.models import CapabilityHealth, CapabilityStatusEnum, RuntimeProfile, TtsRequest, TtsResult
@@ -14,6 +16,9 @@ class KokoroTtsEngineAdapter(TtsEngineAdapter):
     """Adapter for Kokoro, loaded only when optional TTS dependencies are installed."""
 
     engine_name = "kokoro"
+
+    def __init__(self, model_cache_dir: Path | None = None) -> None:
+        self._model_cache_dir = model_cache_dir
 
     def health(self, profile: RuntimeProfile) -> CapabilityHealth:
         if find_spec("kokoro") is None or find_spec("soundfile") is None:
@@ -26,6 +31,10 @@ class KokoroTtsEngineAdapter(TtsEngineAdapter):
         return super().health(profile)
 
     def synthesize(self, request: TtsRequest, profile: RuntimeProfile) -> TtsResult:
+        if self._model_cache_dir is not None:
+            cache_dir = self._model_cache_dir / "huggingface"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            os.environ.setdefault("HF_HOME", str(cache_dir))
         try:
             import soundfile as sf
             from kokoro import KPipeline
