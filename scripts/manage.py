@@ -85,6 +85,13 @@ def start() -> int:
     write_state(state)
     if not wait_health(30):
         raise RuntimeError(f"Servidor não ficou saudável; consulte {LOG_DIR}.")
+    time.sleep(0.5)
+    if process.poll() is not None or not is_owned_process(state):
+        STATE_FILE.unlink(missing_ok=True)
+        raise RuntimeError(
+            "O endpoint respondeu, mas o processo EccoVox recém-iniciado não permaneceu ativo; "
+            "verifique se a porta já está ocupada."
+        )
     print(json.dumps({"ok": True, "status": "running", "pid": process.pid}))
     return 0
 
