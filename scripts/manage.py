@@ -104,14 +104,23 @@ def stop(force: bool) -> int:
         return 0
     import psutil
     process = psutil.Process(int(state["pid"]))
-    process.kill() if force else process.terminate()
-    try:
-        process.wait(timeout=15)
-    except psutil.TimeoutExpired:
-        if force:
-            raise RuntimeError("Processo não encerrou após finalização forçada.")
-        process.kill()
-        process.wait(timeout=5)
+    descendants = process.children(recursive=True)
+    targets = descendants + [process]
+    for target in reversed(targets):
+        try:
+            target.kill() if force else target.terminate()
+        except psutil.NoSuchProcess:
+            pass
+    _gone, alive = psutil.wait_procs(targets, timeout=15)
+    if alive and not force:
+        for target in alive:
+            try:
+                target.kill()
+            except psutil.NoSuchProcess:
+                pass
+        _gone, alive = psutil.wait_procs(alive, timeout=5)
+    if alive:
+        raise RuntimeError("A árvore do processo não encerrou completamente.")
     STATE_FILE.unlink(missing_ok=True)
     print(json.dumps({"ok": True, "status": "stopped", "forced": force}))
     return 0
