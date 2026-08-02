@@ -13,6 +13,7 @@ def test_load_configuration_shouldReturnDefaults_whenPathIsAbsent() -> None:
     assert config.server.host == "127.0.0.1"
     assert config.server.port == 8870
     assert config.runtime.default_profile == "balanced"
+    assert config.runtime.model_cache_dir.is_absolute()
     assert config.stt.max_concurrent == 1
     assert config.tts.queue_size == 0
 
@@ -54,6 +55,7 @@ queue_size = 0
     assert config.server.port == 9000
     assert config.stt.engine == "fake-stt"
     assert config.tts.engine == "fake-tts"
+    assert config.runtime.temp_dir == (tmp_path / ".tmp").resolve()
 
 
 def test_loadConfiguration_shouldAcceptUtf8Bom_whenFileComesFromWindowsTooling(tmp_path: Path) -> None:
@@ -63,6 +65,22 @@ def test_loadConfiguration_shouldAcceptUtf8Bom_whenFileComesFromWindowsTooling(t
     config = load_configuration(config_file)
 
     assert config.stt.engine == "fake-stt"
+
+
+def test_loadConfiguration_shouldResolveRuntimePaths_fromConfigDirectory(tmp_path: Path) -> None:
+    nested = tmp_path / "config"
+    nested.mkdir()
+    config_file = nested / "eccovox.toml"
+    config_file.write_text(
+        '[runtime]\nmodel_cache_dir = "models"\nstate_dir = "state"\nlog_dir = "logs"\n',
+        encoding="utf-8",
+    )
+
+    config = load_configuration(config_file)
+
+    assert config.runtime.model_cache_dir == (nested / "models").resolve()
+    assert config.runtime.state_dir == (nested / "state").resolve()
+    assert config.runtime.log_dir == (nested / "logs").resolve()
 
 
 def test_stt_profile_shouldRejectUnknownProfile_whenOverrideIsInvalid() -> None:

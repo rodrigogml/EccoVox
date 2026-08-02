@@ -1,68 +1,137 @@
 # EccoVox
 
-EccoVox is an independent local voice runtime incubated in this repository.
+EccoVox é um runtime autônomo e local para transcrição de voz (STT) e síntese de
+fala (TTS). Ele expõe uma API HTTP e um CLI, mantém os áudios na própria máquina e
+pode ser consumido por Coworker, Jarvis ou qualquer outro cliente sem dependência
+direta entre os projetos.
 
-It provides speech capabilities through two execution modes:
+## Recursos
 
-- HTTP server mode for long-running API integration.
-- CLI mode for direct one-shot transcription or synthesis.
+- STT com `faster-whisper` em CPU ou NVIDIA CUDA;
+- TTS com Kokoro;
+- API FastAPI versionada em `/v1` e CLI `eccovox`;
+- vocabulário contextual, prompt e aliases explícitos de normalização;
+- cache local de modelos e reutilização do modelo enquanto o servidor está ativo;
+- configuração TOML, gerenciador de processo e serviço Windows.
 
-The initial scope is limited to:
+## Requisitos
 
-- STT: audio to text.
-- TTS: text to audio.
+- Windows 10/11 ou Windows Server e Python 3.11+;
+- para GPU, placa NVIDIA compatível; as DLLs CUDA necessárias são instaladas pelo
+  extra `stt-gpu`, sem exigir o CUDA Toolkit completo;
+- privilégios administrativos somente para instalar/remover o serviço Windows.
 
-EccoVox does not know Jarvis, AIChat or any host application. Consumers integrate through documented HTTP and CLI contracts.
-
-## Development
-
-Install the lightweight development/runtime dependencies:
-
-```powershell
-python -m pip install -e .[dev]
-```
-
-If the local Python certificate store blocks PyPI, use the host-approved certificate fix or a trusted internal mirror. During local troubleshooting only, this workspace was validated with:
-
-```powershell
-python -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -e .[dev]
-```
-
-Run validation:
+## Instalação rápida
 
 ```powershell
-python -m compileall -q src tests
-python -m pytest -q
-python -m eccovox.cli --help
-python -m eccovox.cli serve --help
-python -m eccovox.cli transcribe --help
-python -m eccovox.cli synthesize --help
+git clone git@github.com:rodrigogml/EccoVox.git C:\opt\EccoVox
+Set-Location C:\opt\EccoVox
+.\eccovox.ps1 install
+.\eccovox.ps1 start
+.\eccovox.ps1 status
 ```
 
-For contract tests without heavy STT/TTS dependencies, configure fake engines:
+O instalador cria `.venv`, instala os extras `stt-gpu,service` e copia
+`eccovox.toml.model` para `eccovox.toml` quando a configuração real ainda não
+existe. O arquivo real, modelos, logs e estado são ignorados pelo Git.
+
+Para CPU ou uma instalação mínima:
+
+```powershell
+.\eccovox.ps1 install --extras stt
+```
+
+## Configuração
+
+Edite `eccovox.toml`. Caminhos relativos são resolvidos a partir da pasta que contém
+esse arquivo, portanto a execução não depende do diretório atual.
 
 ```toml
-[stt]
-engine = "fake-stt"
+[server]
+host = "127.0.0.1"
+port = 8870
 
-[tts]
-engine = "fake-tts"
+[runtime]
+temp_dir = ".eccovox/tmp"
+model_cache_dir = ".eccovox/models"
+state_dir = ".eccovox/state"
+log_dir = ".eccovox/logs"
+
+[stt]
+model = "medium"
+device = "cuda"
+compute_type = "int8_float16"
 ```
 
-Install optional real engines separately when needed:
+Use `127.0.0.1` quando só processos da máquina devem acessar o runtime. Para atender
+outras máquinas, associe a uma interface apropriada e proteja rede, firewall e TLS no
+proxy; a API não implementa autenticação por conta própria.
+
+## Gerenciamento
 
 ```powershell
-python -m pip install -e .[stt]
-python -m pip install -e .[tts]
-python -m pip install -e .[voice]
+.\eccovox.ps1 start
+.\eccovox.ps1 stop
+.\eccovox.ps1 kill
+.\eccovox.ps1 restart
+.\eccovox.ps1 status
+.\eccovox.ps1 run
 ```
 
-## Documentation
+`stop` tenta encerramento cooperativo; `kill` é a alternativa forçada. O PID é aceito
+somente quando horário de criação e linha de comando correspondem ao processo que o
+EccoVox registrou, evitando finalizar um PID reciclado pelo Windows.
 
-- [Briefing](docs/briefing/20260618-briefing.md)
-- [Constitution](docs/constitution.md)
-- [Architecture](docs/architecture.md)
-- [Licenses](docs/licenses.md)
-- [Speech Runtime Spec](docs/specs/speech-runtime/spec.md)
-- [API and CLI Contract](docs/specs/speech-runtime/contracts/eccovox-api.md)
-- [Quickstart](docs/specs/speech-runtime/quickstart.md)
+### Serviço Windows
+
+Em um PowerShell elevado:
+
+```powershell
+.\eccovox.ps1 service-install
+.\eccovox.ps1 service-start
+.\eccovox.ps1 service-stop
+.\eccovox.ps1 service-remove
+```
+
+O serviço automático chama a mesma configuração `eccovox.toml`. Não use ao mesmo
+tempo que o processo iniciado por `start`, pois ambos tentariam ocupar a mesma porta.
+
+## API e CLI
+
+Saúde:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8870/v1/health
+```
+
+Transcrição avulsa:
+
+```powershell
+.\.venv\Scripts\eccovox.exe transcribe --file voice.ogg --config eccovox.toml `
+  --language pt-BR --term EccoVox --term backup --alias becapi=backup
+```
+
+Servidor sem o gerenciador:
+
+```powershell
+.\.venv\Scripts\eccovox.exe serve --config eccovox.toml
+```
+
+A documentação interativa fica em `http://127.0.0.1:8870/docs`.
+
+## Desenvolvimento e release
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .[dev]
+.\.venv\Scripts\python.exe -m compileall -q src tests
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m build
+```
+
+Versão, changelog e tag devem ser atualizados juntos. O CI repete testes, compilação
+e construção do wheel/sdist a cada push e pull request.
+
+## Licença
+
+Apache-2.0. Consulte [LICENSE](LICENSE).

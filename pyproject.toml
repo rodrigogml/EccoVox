@@ -1,10 +1,10 @@
 [project]
 name = "eccovox"
-version = "0.1.0"
+version = "1.0.0"
 description = "Independent local voice runtime for speech transcription and text-to-speech synthesis."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [
   { name = "RodrigoGML" }
 ]
@@ -12,16 +12,25 @@ dependencies = [
   "fastapi>=0.115.0,<0.116.0",
   "uvicorn>=0.34.0",
   "typer>=0.15.0",
-  "python-multipart>=0.0.20"
+  "python-multipart>=0.0.20",
+  "psutil>=6.1.0"
 ]
 
 [project.optional-dependencies]
 dev = [
+  "build>=1.2.2",
   "httpx>=0.28.0",
   "pytest>=8.0.0"
 ]
+service = [
+  "pywin32>=308; platform_system == 'Windows'"
+]
 stt = [
   "faster-whisper>=1.1.0"
+]
+stt-gpu = [
+  "faster-whisper>=1.1.0",
+  "nvidia-cudnn-cu12>=9.0.0,<10.0.0; platform_system == 'Windows'"
 ]
 tts = [
   "kokoro>=0.9.4",

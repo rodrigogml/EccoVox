@@ -13,7 +13,10 @@ def stt_adapter(config: RuntimeConfiguration) -> SttEngineAdapter:
 
     if config.stt.engine == "fake-stt":
         return FakeSttEngineAdapter()
-    return FasterWhisperSttEngineAdapter()
+    return FasterWhisperSttEngineAdapter(
+        temp_dir=config.runtime.temp_dir,
+        model_cache_dir=config.runtime.model_cache_dir,
+    )
 
 
 def tts_adapter(config: RuntimeConfiguration) -> TtsEngineAdapter:

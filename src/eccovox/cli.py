@@ -10,6 +10,7 @@ import typer
 import uvicorn
 
 from eccovox.api.app import create_app
+from eccovox.api.routes import _parse_aliases
 from eccovox.core.config import load_configuration, with_server_overrides
 from eccovox.core.errors import EccoVoxError, ErrorCodeEnum, to_error_payload
 from eccovox.core.models import SttRequest, TtsRequest
@@ -41,6 +42,9 @@ def transcribe(
     model: Annotated[str | None, typer.Option("--model")] = None,
     device: Annotated[str | None, typer.Option("--device")] = None,
     compute_type: Annotated[str | None, typer.Option("--compute-type")] = None,
+    prompt: Annotated[str | None, typer.Option("--prompt")] = None,
+    term: Annotated[list[str] | None, typer.Option("--term")] = None,
+    alias: Annotated[list[str] | None, typer.Option("--alias")] = None,
     format: Annotated[str, typer.Option("--format")] = "json",
     config: Annotated[Path | None, typer.Option("--config")] = None,
 ) -> None:
@@ -51,19 +55,27 @@ def transcribe(
         result = runtime.transcribe(
             SttRequest(
                 audio=file.read_bytes(),
+                audio_format=file.suffix,
                 language=language,
                 profile=profile,
                 response_format=format,
                 model=model,
                 device=device,
                 compute_type=compute_type,
+                prompt=prompt,
+                context_terms=tuple(term or ()),
+                normalization_aliases=_parse_aliases(alias or ()),
             )
         )
         typer.echo(
             json.dumps(
                 {
                     "text": result.text,
+                    "rawText": result.raw_text,
                     "language": result.language,
+                    "confidence": result.confidence,
+                    "durationMillis": result.duration_millis,
+                    "normalizationChanges": list(result.normalization_changes),
                     "metadata": result.metadata,
                 },
                 ensure_ascii=False,

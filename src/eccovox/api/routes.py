@@ -13,6 +13,7 @@ from eccovox.core.config import load_configuration
 from eccovox.core.errors import EccoVoxError, ErrorCodeEnum, to_error_payload
 from eccovox.core.models import CapabilityHealth, RuntimeHealth, SttRequest, TtsRequest
 from eccovox.core.runtime import SpeechRuntime
+from eccovox.util.audio_format import audio_format_hint
 
 router = APIRouter(prefix="/v1")
 
@@ -58,6 +59,8 @@ async def transcribe(
     device: Annotated[str | None, Form()] = None,
     compute_type: Annotated[str | None, Form(alias="computeType")] = None,
     prompt: Annotated[str | None, Form()] = None,
+    term: Annotated[list[str] | None, Form()] = None,
+    alias: Annotated[list[str] | None, Form()] = None,
 ) -> dict[str, object]:
     """Transcribe uploaded audio and return normalized JSON."""
 
@@ -66,6 +69,7 @@ async def transcribe(
         result = runtime_from(request).transcribe(
             SttRequest(
                 audio=audio,
+                audio_format=audio_format_hint(file.filename, file.content_type),
                 language=language,
                 profile=profile,
                 response_format=response_format or "json",
@@ -73,13 +77,17 @@ async def transcribe(
                 device=device,
                 compute_type=compute_type,
                 prompt=prompt,
+                context_terms=tuple(term or ()),
+                normalization_aliases=_parse_aliases(alias or ()),
             )
         )
         return {
             "text": result.text,
+            "rawText": result.raw_text,
             "language": result.language,
             "confidence": result.confidence,
             "durationMillis": result.duration_millis,
+            "normalizationChanges": list(result.normalization_changes),
             "metadata": result.metadata,
         }
     except EccoVoxError as exc:
@@ -131,3 +139,13 @@ def _capability_health_to_dict(capability: CapabilityHealth) -> dict[str, object
         "safeMessage": capability.safe_message,
     }
     return {key: value for key, value in data.items() if value not in (None, [], {})}
+
+
+def _parse_aliases(values: list[str] | tuple[str, ...]) -> tuple[tuple[str, str], ...]:
+    aliases: list[tuple[str, str]] = []
+    for value in values:
+        source, separator, target = value.partition("=")
+        if not separator:
+            raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "STT alias must use source=target format.")
+        aliases.append((source, target))
+    return tuple(aliases)

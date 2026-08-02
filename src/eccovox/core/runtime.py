@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from eccovox import __version__
 from eccovox.core.concurrency import CapacityLimiter
 from eccovox.core.config import stt_profile, tts_profile
@@ -18,6 +20,7 @@ from eccovox.core.models import (
 )
 from eccovox.engine.base import SttEngineAdapter, TtsEngineAdapter
 from eccovox.engine.registry import stt_adapter, tts_adapter
+from eccovox.core.normalization import normalize_transcript
 
 
 class SpeechRuntime:
@@ -52,9 +55,26 @@ class SpeechRuntime:
             raise EccoVoxError(ErrorCodeEnum.INVALID_AUDIO, "Audio input is required.")
         if len(request.audio) > self.config.stt.max_audio_bytes:
             raise EccoVoxError(ErrorCodeEnum.INVALID_AUDIO, "Audio input exceeds configured size limit.")
+        _validate_stt_context(request)
         profile = stt_profile(self.config, request)
         with self._stt_limiter.acquire():
-            return self._stt_engine.transcribe(request, profile)
+            result = self._stt_engine.transcribe(request, profile)
+        normalized = normalize_transcript(
+            result.text,
+            request.context_terms,
+            request.normalization_aliases,
+        )
+        changes = tuple(
+            {"source": change.source, "target": change.target, "reason": change.reason}
+            for change in normalized.changes
+        )
+        return replace(
+            result,
+            text=normalized.text,
+            raw_text=result.text if normalized.text != result.text else None,
+            normalization_changes=changes,
+            metadata={**result.metadata, "normalizationChangeCount": len(changes)},
+        )
 
     def synthesize(self, request: TtsRequest) -> TtsResult:
         """Execute one TTS operation."""
@@ -95,3 +115,26 @@ class SpeechRuntime:
         if any(status == CapabilityStatusEnum.READY for status in enabled_statuses):
             return CapabilityStatusEnum.DEGRADED
         return CapabilityStatusEnum.UNAVAILABLE
+
+
+def _validate_stt_context(request: SttRequest) -> None:
+    if request.prompt is not None and len(request.prompt) > 4_000:
+        raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "STT prompt exceeds the supported length.")
+    if len(request.context_terms) > 100:
+        raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "STT context contains too many terms.")
+    if any(not term.strip() or len(term) > 80 for term in request.context_terms):
+        raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "STT context terms must contain 1 to 80 characters.")
+    if len(request.normalization_aliases) > 100:
+        raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "STT normalization contains too many aliases.")
+    aliases: dict[str, str] = {}
+    for source, target in request.normalization_aliases:
+        source_value = source.strip()
+        target_value = target.strip()
+        if not source_value or not target_value or len(source_value) > 80 or len(target_value) > 80:
+            raise EccoVoxError(
+                ErrorCodeEnum.INVALID_OVERRIDE,
+                "STT normalization aliases must contain source and target values of 1 to 80 characters.",
+            )
+        previous = aliases.setdefault(source_value.casefold(), target_value.casefold())
+        if previous != target_value.casefold():
+            raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "STT normalization alias source is ambiguous.")

@@ -11,7 +11,7 @@ class SttEngineAdapter(ABC):
     """Adapter interface for STT engines."""
 
     engine_name: str = "unknown"
-    supported_formats: tuple[str, ...] = ("wav", "mp3", "webm")
+    supported_formats: tuple[str, ...] = ("wav", "mp3", "m4a", "mp4", "ogg", "opus", "webm", "flac")
 
     def health(self, profile: RuntimeProfile) -> CapabilityHealth:
         """Return health for this adapter without transcribing audio."""

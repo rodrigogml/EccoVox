@@ -41,11 +41,19 @@ def test_transcribe_shouldReturnJson_whenMultipartIsValid() -> None:
         "post",
         "/v1/audio/transcriptions",
         files={"file": ("input.wav", b"audio", "audio/wav")},
-        data={"language": "pt-BR", "responseFormat": "json"},
+        data={
+            "language": "pt-BR",
+            "responseFormat": "json",
+            "term": ["Todoist", "backup"],
+            "alias": ["becapi=backup"],
+        },
     )
 
     assert response.status_code == 200
     assert response.json()["text"] == "texto transcrito"
+    assert response.json()["confidence"] is None
+    assert response.json()["durationMillis"] is None
+    assert response.json()["normalizationChanges"] == []
 
 
 def test_speech_shouldReturnAudio_whenJsonIsValid() -> None:

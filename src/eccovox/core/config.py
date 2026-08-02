@@ -25,7 +25,9 @@ def load_configuration(config_path: Path | str | None = None) -> RuntimeConfigur
     """Load runtime configuration from TOML or return validated defaults."""
 
     if config_path is None:
-        return validate_configuration(RuntimeConfiguration())
+        return validate_configuration(
+            RuntimeConfiguration(runtime=_runtime_config({}, Path.cwd()))
+        )
 
     path = Path(config_path)
     if not path.exists():
@@ -36,7 +38,7 @@ def load_configuration(config_path: Path | str | None = None) -> RuntimeConfigur
     except tomllib.TOMLDecodeError as exc:
         raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "Configuration file is not valid TOML.") from exc
     server = _server_config(data.get("server", {}))
-    runtime = _runtime_config(data.get("runtime", {}))
+    runtime = _runtime_config(data.get("runtime", {}), path.parent.resolve())
     stt = _stt_config(data.get("stt", {}))
     tts = _tts_config(data.get("tts", {}))
     return validate_configuration(RuntimeConfiguration(server=server, runtime=runtime, stt=stt, tts=tts))
@@ -108,14 +110,23 @@ def _server_config(data: dict[str, Any]) -> ServerConfig:
     return ServerConfig(host=str(data.get("host", "127.0.0.1")), port=int(data.get("port", 8870)))
 
 
-def _runtime_config(data: dict[str, Any]) -> RuntimeConfig:
+def _runtime_config(data: dict[str, Any], base_dir: Path | None = None) -> RuntimeConfig:
     profiles = tuple(str(item) for item in data.get("profiles", ["default", "balanced", "premium", "diagnostic", "process"]))
+    root = base_dir or Path.cwd()
     return RuntimeConfig(
-        temp_dir=Path(str(data.get("temp_dir", ".eccovox/tmp"))),
+        temp_dir=_resolved_path(root, data.get("temp_dir", ".eccovox/tmp")),
+        model_cache_dir=_resolved_path(root, data.get("model_cache_dir", ".eccovox/models")),
+        state_dir=_resolved_path(root, data.get("state_dir", ".eccovox/state")),
+        log_dir=_resolved_path(root, data.get("log_dir", ".eccovox/logs")),
         request_timeout_seconds=int(data.get("request_timeout_seconds", 120)),
         profiles=profiles,
         default_profile=str(data.get("default_profile", "balanced")),
     )
+
+
+def _resolved_path(base_dir: Path, value: object) -> Path:
+    path = Path(str(value)).expanduser()
+    return path.resolve() if path.is_absolute() else (base_dir / path).resolve()
 
 
 def _stt_config(data: dict[str, Any]) -> SttConfig:
@@ -123,7 +134,7 @@ def _stt_config(data: dict[str, Any]) -> SttConfig:
         enabled=bool(data.get("enabled", True)),
         engine=str(data.get("engine", "faster-whisper")),
         profile=str(data.get("profile", "balanced")),
-        model=str(data.get("model", "large-v3")),
+        model=str(data.get("model", "medium")),
         device=str(data.get("device", "cpu")),
         compute_type=str(data.get("compute_type", "int8")),
         max_audio_bytes=int(data.get("max_audio_bytes", 10_485_760)),

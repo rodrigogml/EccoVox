@@ -39,3 +39,28 @@ def test_transcribe_shouldRaiseCapabilityDisabled_whenSttIsDisabled() -> None:
         runtime.transcribe(SttRequest(audio=b"audio"))
 
     assert error.value.code == ErrorCodeEnum.CAPABILITY_DISABLED
+
+
+def test_transcribe_shouldRejectOversizedContextTerm() -> None:
+    runtime = SpeechRuntime(RuntimeConfiguration(), FakeSttEngineAdapter(), FakeTtsEngineAdapter())
+
+    with pytest.raises(EccoVoxError) as error:
+        runtime.transcribe(SttRequest(audio=b"audio", context_terms=("x" * 81,)))
+
+    assert error.value.code == ErrorCodeEnum.INVALID_OVERRIDE
+
+
+def test_transcribe_shouldExposeRawText_whenExplicitAliasChangesResult() -> None:
+    runtime = SpeechRuntime(
+        RuntimeConfiguration(stt=SttConfig(engine="fake-stt"), tts=TtsConfig(engine="fake-tts")),
+        FakeSttEngineAdapter(),
+        FakeTtsEngineAdapter(),
+    )
+
+    result = runtime.transcribe(
+        SttRequest(audio=b"audio", normalization_aliases=(("texto transcrito", "backup concluído"),))
+    )
+
+    assert result.text == "backup concluído"
+    assert result.raw_text == "texto transcrito"
+    assert result.normalization_changes[0]["reason"] == "explicit_alias"

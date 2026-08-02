@@ -21,9 +21,9 @@ def test_fasterWhisperAdapter_shouldExposeOperationalPath_whenEngineExtraIsAvail
         name="diagnostic",
         capability=CapabilityEnum.STT,
         engine="faster-whisper",
-        model="tiny",
-        device="cpu",
-        compute_type="int8",
+        model=os.getenv("ECCOVOX_STT_MODEL", "tiny"),
+        device=os.getenv("ECCOVOX_STT_DEVICE", "cpu"),
+        compute_type=os.getenv("ECCOVOX_STT_COMPUTE_TYPE", "int8"),
     )
 
     result = adapter.transcribe(SttRequest(audio=Path(sample_path).read_bytes(), language="pt-BR"), profile)

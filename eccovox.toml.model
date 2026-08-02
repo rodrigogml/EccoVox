@@ -3,7 +3,10 @@ host = "127.0.0.1"
 port = 8870
 
 [runtime]
-temp_dir = "/opt/EccoVox/runtime/tmp"
+temp_dir = ".eccovox/tmp"
+model_cache_dir = ".eccovox/models"
+state_dir = ".eccovox/state"
+log_dir = ".eccovox/logs"
 request_timeout_seconds = 120
 profiles = ["default", "balanced", "premium", "diagnostic", "process"]
 default_profile = "balanced"
@@ -12,9 +15,9 @@ default_profile = "balanced"
 enabled = true
 engine = "faster-whisper"
 profile = "balanced"
-model = "tiny"
-device = "cpu"
-compute_type = "int8"
+model = "medium"
+device = "cuda"
+compute_type = "int8_float16"
 max_audio_bytes = 10485760
 short_audio_budget_millis = 5000
 max_concurrent = 1

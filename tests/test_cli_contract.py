@@ -19,10 +19,30 @@ def test_transcribe_shouldWriteJsonToStdout_whenUsingFakeEngine(tmp_path: Path) 
     audio.write_bytes(b"audio")
     config = _fake_config(tmp_path)
 
-    result = CliRunner().invoke(app, ["transcribe", "--file", str(audio), "--config", str(config)])
+    result = CliRunner().invoke(
+        app,
+        [
+            "transcribe",
+            "--file",
+            str(audio),
+            "--prompt",
+            "Transcrição fiel",
+            "--term",
+            "backup",
+            "--term",
+            "Cloudflare",
+            "--alias",
+            "becapi=backup",
+            "--config",
+            str(config),
+        ],
+    )
 
     assert result.exit_code == 0
     assert "texto transcrito" in result.stdout
+    assert '"confidence": null' in result.stdout
+    assert '"durationMillis": null' in result.stdout
+    assert '"normalizationChanges": []' in result.stdout
     assert result.stderr == ""
 
 

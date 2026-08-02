@@ -54,6 +54,9 @@ class RuntimeConfig:
     """Runtime-wide configuration shared by STT and TTS."""
 
     temp_dir: Path = Path(".eccovox/tmp")
+    model_cache_dir: Path = Path(".eccovox/models")
+    state_dir: Path = Path(".eccovox/state")
+    log_dir: Path = Path(".eccovox/logs")
     request_timeout_seconds: int = 120
     profiles: tuple[str, ...] = ("default", "balanced", "premium", "diagnostic", "process")
     default_profile: str = "balanced"
@@ -66,7 +69,7 @@ class SttConfig:
     enabled: bool = True
     engine: str = "faster-whisper"
     profile: str = "balanced"
-    model: str = "large-v3"
+    model: str = "medium"
     device: str = "cpu"
     compute_type: str = "int8"
     max_audio_bytes: int = 10_485_760
@@ -153,6 +156,7 @@ class SttRequest:
     """Normalized STT request used by runtime and adapters."""
 
     audio: bytes
+    audio_format: str | None = None
     profile: str | None = None
     language: str | None = None
     response_format: str = "json"
@@ -160,6 +164,8 @@ class SttRequest:
     device: str | None = None
     compute_type: str | None = None
     prompt: str | None = None
+    context_terms: tuple[str, ...] = ()
+    normalization_aliases: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -167,9 +173,11 @@ class SttResult:
     """Normalized STT result."""
 
     text: str
+    raw_text: str | None = None
     language: str | None = None
     confidence: float | None = None
     duration_millis: int | None = None
+    normalization_changes: tuple[dict[str, str], ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
