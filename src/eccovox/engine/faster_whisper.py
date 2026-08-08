@@ -121,7 +121,15 @@ class FasterWhisperSttEngineAdapter(SttEngineAdapter):
                     configure_nvidia_dll_directories()
                 from faster_whisper import WhisperModel
             except ImportError as exc:
-                raise EccoVoxError(ErrorCodeEnum.RUNTIME_UNAVAILABLE, "faster-whisper extra is not installed.") from exc
+                missing_module = getattr(exc, "name", None)
+                raise EccoVoxError(
+                    ErrorCodeEnum.RUNTIME_UNAVAILABLE,
+                    "faster-whisper or one of its runtime dependencies could not be loaded.",
+                    {
+                        "exceptionType": type(exc).__name__,
+                        **({"module": missing_module} if missing_module else {}),
+                    },
+                ) from exc
             options: dict[str, object] = {"device": device, "compute_type": compute_type}
             if self._model_cache_dir is not None:
                 options["download_root"] = str(self._model_cache_dir)

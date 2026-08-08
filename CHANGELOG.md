@@ -9,6 +9,7 @@
 - Loop assíncrono compatível com a thread de serviço do pywin32 no Windows.
 - Registro automático do `PYTHONPATH` privado da venv no serviço Windows.
 - Descoberta das DLLs NVIDIA pela venv mesmo sob o interpretador incorporado do serviço.
+- Diagnóstico preciso quando uma dependência transitiva do STT não pode ser carregada.
 
 ## 1.0.0 - 2026-08-02
 
