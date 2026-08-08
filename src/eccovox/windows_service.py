@@ -4,6 +4,19 @@ from __future__ import annotations
 
 from pathlib import Path
 import socket
+import sys
+
+
+def _bootstrap_pywin32() -> None:
+    """Expose pywin32 subdirectories when pythonservice skips virtualenv .pth files."""
+    site_packages = Path(__file__).resolve().parents[2] / ".venv" / "Lib" / "site-packages"
+    for relative in ("", "win32", "win32/lib", "pythonwin"):
+        candidate = site_packages / relative
+        if candidate.is_dir() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+
+
+_bootstrap_pywin32()
 
 from eccovox.core.config import load_configuration
 from eccovox.core.runtime import SpeechRuntime

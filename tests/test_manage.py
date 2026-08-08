@@ -1,4 +1,6 @@
 from pathlib import Path, PurePosixPath
+import importlib.util
+import os
 import subprocess
 from unittest.mock import patch
 
@@ -84,3 +86,14 @@ def test_service_control_dispatches_to_systemd(monkeypatch) -> None:
 
     assert manage.service_control("restart") == 0
     assert calls == [["systemctl", "restart", "eccovox.service"]]
+
+
+@pytest.mark.skipif(
+    os.name != "nt" or importlib.util.find_spec("servicemanager") is None,
+    reason="Windows service dependencies unavailable",
+)
+def test_windows_service_bootstraps_pywin32_from_virtualenv() -> None:
+    import eccovox.windows_service as service
+
+    assert service.servicemanager is not None
+    assert service.win32serviceutil is not None
