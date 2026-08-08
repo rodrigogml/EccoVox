@@ -37,9 +37,9 @@ def nvidia_dll_directories() -> tuple[Path, ...]:
     """Return existing DLL directories in deterministic priority order."""
 
     candidates: list[Path] = []
-    site_packages = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
     candidates.extend(
-        site_packages / package / "bin"
+        site_packages / "nvidia" / package / "bin"
+        for site_packages in _site_packages_directories()
         for package in ("cublas", "cudnn", "cuda_nvrtc")
     )
     cuda_path = os.environ.get("CUDA_PATH")
@@ -59,6 +59,22 @@ def nvidia_dll_directories() -> tuple[Path, ...]:
             seen_paths.add(candidate)
             unique_paths.append(candidate)
     return tuple(unique_paths)
+
+
+def _site_packages_directories() -> tuple[Path, ...]:
+    """Find environment packages even when pythonservice keeps the base sys.prefix."""
+
+    candidates = [Path(sys.prefix) / "Lib" / "site-packages"]
+    candidates.extend(
+        Path(entry)
+        for entry in sys.path
+        if entry and Path(entry).name.casefold() == "site-packages"
+    )
+    unique: list[Path] = []
+    for candidate in candidates:
+        if candidate.is_dir() and candidate not in unique:
+            unique.append(candidate)
+    return tuple(unique)
 
 
 def _prepend_process_path(paths: list[Path]) -> None:

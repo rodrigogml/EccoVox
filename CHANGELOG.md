@@ -8,6 +8,7 @@
 - Bootstrap explícito do pywin32 para serviços executados em ambiente virtual.
 - Loop assíncrono compatível com a thread de serviço do pywin32 no Windows.
 - Registro automático do `PYTHONPATH` privado da venv no serviço Windows.
+- Descoberta das DLLs NVIDIA pela venv mesmo sob o interpretador incorporado do serviço.
 
 ## 1.0.0 - 2026-08-02
 
