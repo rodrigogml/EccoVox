@@ -51,11 +51,18 @@ class EccoVoxService(win32serviceutil.ServiceFramework):
 
     def SvcDoRun(self):
         import asyncio
+        from contextlib import contextmanager
         import uvicorn
+
+        class WindowsServiceServer(uvicorn.Server):
+            @contextmanager
+            def capture_signals(self):
+                # Service control events replace console signal handlers.
+                yield
 
         root = Path(__file__).resolve().parents[2]
         config = load_configuration(root / "eccovox.toml")
-        self.server = uvicorn.Server(
+        self.server = WindowsServiceServer(
             uvicorn.Config(
                 create_app(SpeechRuntime(config)),
                 host=config.server.host,
