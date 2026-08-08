@@ -50,6 +50,7 @@ class EccoVoxService(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.stop_event)
 
     def SvcDoRun(self):
+        import asyncio
         import uvicorn
 
         root = Path(__file__).resolve().parents[2]
@@ -63,7 +64,17 @@ class EccoVoxService(win32serviceutil.ServiceFramework):
             )
         )
         servicemanager.LogInfoMsg("EccoVox service started")
-        self.server.run()
+        # pywin32 executes SvcDoRun outside the main interpreter thread. The
+        # default Windows proactor loop calls signal.set_wakeup_fd() and fails
+        # in that context, so the service owns an explicit selector loop.
+        loop = asyncio.SelectorEventLoop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(self.server.serve())
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            asyncio.set_event_loop(None)
+            loop.close()
 
 
 if __name__ == "__main__":

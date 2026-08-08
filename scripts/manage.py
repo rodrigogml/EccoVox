@@ -173,8 +173,11 @@ def service_install(service_user: str | None = None) -> int:
         [str(VENV_PYTHON), "-m", "eccovox.windows_service", "--startup", "auto", "install"],
         cwd=ROOT,
     )
-    if result.returncode or not service_exists():
+    if result.returncode:
         raise RuntimeError("O serviço EccoVox não foi instalado; execute em um PowerShell elevado.")
+    configure_windows_service_environment()
+    if not service_exists():
+        raise RuntimeError("O serviço EccoVox não foi localizado após a instalação.")
     return 0
 
 
@@ -197,6 +200,44 @@ def service_exists() -> bool:
         return True
     except psutil.NoSuchProcess:
         return False
+
+
+def windows_service_python_path() -> str:
+    site_packages = VENV / "Lib" / "site-packages"
+    candidates = (
+        site_packages,
+        site_packages / "win32",
+        site_packages / "win32" / "lib",
+        site_packages / "pythonwin",
+        ROOT / "src",
+    )
+    return ";".join(str(path.resolve()) for path in candidates if path.is_dir())
+
+
+def configure_windows_service_environment() -> None:
+    if service_platform() != "windows":
+        raise RuntimeError("O ambiente pywin32 é aplicável somente ao Windows.")
+    import winreg
+
+    key_path = rf"SYSTEM\CurrentControlSet\Services\{SERVICE_NAME}"
+    with winreg.OpenKey(
+        winreg.HKEY_LOCAL_MACHINE, key_path, 0, winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE
+    ) as key:
+        try:
+            existing, _kind = winreg.QueryValueEx(key, "Environment")
+        except FileNotFoundError:
+            existing = []
+        preserved = [
+            value for value in existing
+            if not str(value).upper().startswith("PYTHONPATH=")
+        ]
+        winreg.SetValueEx(
+            key,
+            "Environment",
+            0,
+            winreg.REG_MULTI_SZ,
+            [*preserved, f"PYTHONPATH={windows_service_python_path()}"],
+        )
 
 
 def service_control(action: str, check: bool = True) -> int:

@@ -88,6 +88,28 @@ def test_service_control_dispatches_to_systemd(monkeypatch) -> None:
     assert calls == [["systemctl", "restart", "eccovox.service"]]
 
 
+def test_windows_service_python_path_contains_pywin32_and_project(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import scripts.manage as manage
+
+    root = tmp_path / "EccoVox"
+    site = root / ".venv" / "Lib" / "site-packages"
+    for relative in ("win32/lib", "pythonwin"):
+        (site / relative).mkdir(parents=True)
+    (root / "src").mkdir(parents=True)
+    monkeypatch.setattr(manage, "ROOT", root)
+    monkeypatch.setattr(manage, "VENV", root / ".venv")
+
+    paths = manage.windows_service_python_path().split(";")
+
+    assert str(site.resolve()) in paths
+    assert str((site / "win32").resolve()) in paths
+    assert str((site / "win32" / "lib").resolve()) in paths
+    assert str((site / "pythonwin").resolve()) in paths
+    assert str((root / "src").resolve()) in paths
+
+
 @pytest.mark.skipif(
     os.name != "nt" or importlib.util.find_spec("servicemanager") is None,
     reason="Windows service dependencies unavailable",

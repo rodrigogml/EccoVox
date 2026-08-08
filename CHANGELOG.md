@@ -6,6 +6,8 @@
 - Comandos uniformes de status e reinício do serviço no Windows e no Linux.
 - Script `eccovox.sh` para instalação e operação em distribuições Linux.
 - Bootstrap explícito do pywin32 para serviços executados em ambiente virtual.
+- Loop assíncrono compatível com a thread de serviço do pywin32 no Windows.
+- Registro automático do `PYTHONPATH` privado da venv no serviço Windows.
 
 ## 1.0.0 - 2026-08-02
 
