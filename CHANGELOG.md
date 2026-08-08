@@ -10,6 +10,8 @@
 - Registro automático do `PYTHONPATH` privado da venv no serviço Windows.
 - Descoberta das DLLs NVIDIA pela venv mesmo sob o interpretador incorporado do serviço.
 - Diagnóstico preciso quando uma dependência transitiva do STT não pode ser carregada.
+- Serviço Windows convertido em supervisor do Python da própria venv, eliminando
+  diferenças de runtime entre serviço e execução interativa.
 
 ## 1.0.0 - 2026-08-02
 

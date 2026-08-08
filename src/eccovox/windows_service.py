@@ -1,15 +1,22 @@
-"""Windows Service wrapper for the EccoVox HTTP runtime."""
+"""Windows Service supervisor for the EccoVox HTTP runtime."""
 
 from __future__ import annotations
 
 from pathlib import Path
 import socket
+import subprocess
 import sys
+
+
+ROOT = Path(__file__).resolve().parents[2]
+VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+CONFIG = ROOT / "eccovox.toml"
+LOG_DIR = ROOT / ".eccovox" / "logs"
 
 
 def _bootstrap_pywin32() -> None:
     """Expose pywin32 subdirectories when pythonservice skips virtualenv .pth files."""
-    site_packages = Path(__file__).resolve().parents[2] / ".venv" / "Lib" / "site-packages"
+    site_packages = ROOT / ".venv" / "Lib" / "site-packages"
     for relative in ("", "win32", "win32/lib", "pythonwin"):
         candidate = site_packages / relative
         if candidate.is_dir() and str(candidate) not in sys.path:
@@ -17,11 +24,6 @@ def _bootstrap_pywin32() -> None:
 
 
 _bootstrap_pywin32()
-
-from eccovox.core.config import load_configuration
-from eccovox.core.runtime import SpeechRuntime
-from eccovox.api.app import create_app
-
 
 try:
     import servicemanager
@@ -40,48 +42,63 @@ class EccoVoxService(win32serviceutil.ServiceFramework):
     def __init__(self, args):
         super().__init__(args)
         self.stop_event = win32event.CreateEvent(None, 0, 0, None)
-        self.server = None
+        self.process: subprocess.Popen[bytes] | None = None
         socket.setdefaulttimeout(60)
 
     def SvcStop(self):
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        if self.server is not None:
-            self.server.should_exit = True
         win32event.SetEvent(self.stop_event)
 
     def SvcDoRun(self):
-        import asyncio
-        from contextlib import contextmanager
-        import uvicorn
-
-        class WindowsServiceServer(uvicorn.Server):
-            @contextmanager
-            def capture_signals(self):
-                # Service control events replace console signal handlers.
-                yield
-
-        root = Path(__file__).resolve().parents[2]
-        config = load_configuration(root / "eccovox.toml")
-        self.server = WindowsServiceServer(
-            uvicorn.Config(
-                create_app(SpeechRuntime(config)),
-                host=config.server.host,
-                port=config.server.port,
-                log_config=None,
+        if not VENV_PYTHON.is_file() or not CONFIG.is_file():
+            raise RuntimeError("A venv ou o eccovox.toml não foi encontrado.")
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        with (
+            (LOG_DIR / "windows-service.log").open("ab") as stdout,
+            (LOG_DIR / "windows-service-error.log").open("ab") as stderr,
+        ):
+            self.process = subprocess.Popen(
+                [
+                    str(VENV_PYTHON),
+                    "-m",
+                    "eccovox.cli",
+                    "serve",
+                    "--config",
+                    str(CONFIG),
+                ],
+                cwd=ROOT,
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                close_fds=True,
             )
-        )
-        servicemanager.LogInfoMsg("EccoVox service started")
-        # pywin32 executes SvcDoRun outside the main interpreter thread. The
-        # default Windows proactor loop calls signal.set_wakeup_fd() and fails
-        # in that context, so the service owns an explicit selector loop.
-        loop = asyncio.SelectorEventLoop()
-        asyncio.set_event_loop(loop)
+            servicemanager.LogInfoMsg(
+                f"EccoVox service started child process {self.process.pid}"
+            )
+            stop_requested = False
+            while self.process.poll() is None:
+                result = win32event.WaitForSingleObject(self.stop_event, 1_000)
+                if result == win32event.WAIT_OBJECT_0:
+                    stop_requested = True
+                    self._stop_child()
+                    break
+            return_code = self.process.poll()
+            if return_code not in (None, 0) and not stop_requested:
+                raise RuntimeError(
+                    f"O processo EccoVox encerrou inesperadamente com código {return_code}."
+                )
+
+    def _stop_child(self) -> None:
+        process = self.process
+        if process is None or process.poll() is not None:
+            return
+        process.terminate()
         try:
-            loop.run_until_complete(self.server.serve())
-        finally:
-            loop.run_until_complete(loop.shutdown_asyncgens())
-            asyncio.set_event_loop(None)
-            loop.close()
+            process.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
 
 
 if __name__ == "__main__":
