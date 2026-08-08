@@ -16,6 +16,8 @@ independência: integrações consumidoras pertencem aos seus próprios reposit�
 
 ## Operação
 
-Use `eccovox.ps1` para instalar, iniciar, parar, reiniciar, consultar e administrar
-o serviço. O arquivo real de configuração é resolvido a partir da raiz do projeto.
-Não finalize PIDs sem validar que pertencem a uma instância EccoVox registrada.
+Use `eccovox.ps1` no Windows ou `eccovox.sh` no Linux para instalar, iniciar, parar,
+reiniciar, consultar e administrar o serviço. No Linux, a integração suportada é um
+serviço systemd de sistema; não improvise unidades ou comandos paralelos. O arquivo
+real de configuração é resolvido a partir da raiz do projeto. Não finalize PIDs sem
+validar que pertencem a uma instância EccoVox registrada.

@@ -12,14 +12,15 @@ direta entre os projetos.
 - API FastAPI versionada em `/v1` e CLI `eccovox`;
 - vocabulário contextual, prompt e aliases explícitos de normalização;
 - cache local de modelos e reutilização do modelo enquanto o servidor está ativo;
-- configuração TOML, gerenciador de processo e serviço Windows.
+- configuração TOML, gerenciador de processo e serviço nativo no Windows ou Linux.
 
 ## Requisitos
 
-- Windows 10/11 ou Windows Server e Python 3.11+;
+- Windows 10/11, Windows Server ou Linux com systemd e Python 3.11+;
 - para GPU, placa NVIDIA compatível; as DLLs CUDA necessárias são instaladas pelo
   extra `stt-gpu`, sem exigir o CUDA Toolkit completo;
-- privilégios administrativos somente para instalar/remover o serviço Windows.
+- privilégios administrativos somente para instalar/remover/controlar o serviço do
+  sistema.
 
 ## Instalação rápida
 
@@ -40,6 +41,20 @@ Para CPU ou uma instalação mínima:
 ```powershell
 .\eccovox.ps1 install --extras stt
 ```
+
+No Linux:
+
+```bash
+git clone git@github.com:rodrigogml/EccoVox.git /opt/EccoVox
+cd /opt/EccoVox
+./eccovox.sh install --extras stt,tts
+./eccovox.sh start
+./eccovox.sh status
+```
+
+`start` executa um processo independente gerenciado pelo próprio EccoVox. Para uma
+instalação permanente, inicializada junto com o sistema e reiniciada em caso de
+falha, prefira o serviço descrito abaixo.
 
 ## Configuração
 
@@ -82,19 +97,53 @@ proxy; a API não implementa autenticação por conta própria.
 somente quando horário de criação e linha de comando correspondem ao processo que o
 EccoVox registrou, evitando finalizar um PID reciclado pelo Windows.
 
-### Serviço Windows
+### Serviço do sistema
+
+Não mantenha simultaneamente o processo criado por `start` e o serviço: ambos usam a
+mesma porta. Antes da primeira inicialização do serviço, execute `stop` caso o runtime
+esteja rodando como processo.
+
+#### Windows
 
 Em um PowerShell elevado:
 
 ```powershell
 .\eccovox.ps1 service-install
 .\eccovox.ps1 service-start
+.\eccovox.ps1 service-status
+.\eccovox.ps1 service-restart
 .\eccovox.ps1 service-stop
 .\eccovox.ps1 service-remove
 ```
 
-O serviço automático chama a mesma configuração `eccovox.toml`. Não use ao mesmo
-tempo que o processo iniciado por `start`, pois ambos tentariam ocupar a mesma porta.
+O serviço é instalado com inicialização automática e usa o mesmo `eccovox.toml`.
+
+#### Linux (systemd)
+
+Instale primeiro como usuário normal. Depois administre a unidade com `sudo`:
+
+```bash
+./eccovox.sh install --extras stt,tts
+./eccovox.sh stop
+sudo ./eccovox.sh service-install --service-user "$USER"
+sudo ./eccovox.sh service-start
+sudo ./eccovox.sh service-status
+```
+
+O comando cria `/etc/systemd/system/eccovox.service`, habilita a inicialização no
+boot e configura reinício automático após falhas. A instalação não inicia o serviço
+automaticamente, evitando tomar a porta sem uma decisão explícita. Para manutenção:
+
+```bash
+sudo ./eccovox.sh service-restart
+sudo ./eccovox.sh service-stop
+sudo ./eccovox.sh service-remove
+```
+
+Quando `--service-user` não é informado, o instalador usa `SUDO_USER`; em uma sessão
+root sem esse contexto, usa o usuário atual. É recomendável informar explicitamente
+uma conta sem privilégios que tenha leitura do projeto e escrita nos diretórios de
+estado, logs, temporários e cache configurados.
 
 ## API e CLI
 

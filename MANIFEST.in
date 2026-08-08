@@ -1,0 +1,6 @@
+include AGENTS.md
+include CHANGELOG.md
+include eccovox.ps1
+include eccovox.sh
+include eccovox.toml.model
+recursive-include scripts *.py

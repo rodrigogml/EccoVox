@@ -1,6 +1,6 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('install','start','stop','kill','restart','status','run','service-install','service-remove','service-start','service-stop')]
+    [ValidateSet('install','start','stop','kill','restart','status','run','service-install','service-remove','service-start','service-stop','service-restart','service-status')]
     [string]$Command = 'status',
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Arguments

@@ -1,5 +1,11 @@
 # Changelog
 
+## Não lançado
+
+- Instalador e gerenciador de serviço systemd para Linux.
+- Comandos uniformes de status e reinício do serviço no Windows e no Linux.
+- Script `eccovox.sh` para instalação e operação em distribuições Linux.
+
 ## 1.0.0 - 2026-08-02
 
 - Primeiro lançamento autônomo do EccoVox.
