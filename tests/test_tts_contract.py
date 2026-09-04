@@ -90,3 +90,38 @@ def test_kokoroAdapter_shouldWriteAllGeneratedAudioChunks(monkeypatch: pytest.Mo
     assert captured["format"] == "WAV"
     assert result.audio == b"\x01\x02\x03\x04"
     assert result.content_type == "audio/wav"
+
+
+def test_kokoroAdapter_shouldReusePipeline_forWarmRequests(monkeypatch: pytest.MonkeyPatch) -> None:
+    created = 0
+
+    class FakePipeline:
+        def __init__(self, lang_code: str) -> None:
+            nonlocal created
+            created += 1
+
+        def __call__(self, text: str, voice: str | None, speed: float):
+            return [("", "", [1, 2])]
+
+    def fake_write(buffer, audio, samplerate: int, format: str) -> None:
+        buffer.write(bytes(audio))
+
+    monkeypatch.setitem(sys.modules, "kokoro", types.SimpleNamespace(KPipeline=FakePipeline))
+    monkeypatch.setitem(sys.modules, "numpy", types.SimpleNamespace(concatenate=lambda chunks: chunks[0]))
+    monkeypatch.setitem(sys.modules, "soundfile", types.SimpleNamespace(write=fake_write))
+
+    adapter = KokoroTtsEngineAdapter()
+    profile = RuntimeProfile(name="balanced", capability=CapabilityEnum.TTS, engine="kokoro", voice="pf_dora", language="pt-BR", response_format="wav")
+    adapter.synthesize(TtsRequest(input_text="primeira"), profile)
+    adapter.synthesize(TtsRequest(input_text="segunda"), profile)
+
+    assert created == 1
+
+
+def test_kokoroAdapter_shouldFallbackToPathFfmpeg_whenConfiguredFileIsMissing(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("eccovox.engine.kokoro.shutil.which", lambda _name: "C:/ffmpeg/ffmpeg.exe")
+    adapter = KokoroTtsEngineAdapter(encoder_path=str(tmp_path / "missing.exe"))
+
+    assert adapter._ffmpeg() == "C:/ffmpeg/ffmpeg.exe"

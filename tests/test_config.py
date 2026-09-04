@@ -99,3 +99,18 @@ def test_tts_profile_shouldRejectUnsupportedFormat_whenFormatIsInvalid() -> None
         tts_profile(config, TtsRequest(input_text="hello", response_format="aac"))
 
     assert error.value.code == ErrorCodeEnum.UNSUPPORTED_AUDIO_FORMAT
+
+
+def test_tts_profile_shouldUseConfiguredDeviceAndPremiumSpeed() -> None:
+    config = load_configuration()
+    config = config.__class__(
+        server=config.server,
+        runtime=config.runtime,
+        stt=config.stt,
+        tts=config.tts.__class__(**{**config.tts.__dict__, "device": "cuda"}),
+    )
+
+    profile = tts_profile(config, TtsRequest(input_text="hello", profile="premium"))
+
+    assert profile.device == "cuda"
+    assert profile.speed == 0.95

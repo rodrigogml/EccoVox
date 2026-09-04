@@ -45,6 +45,10 @@ class TtsEngineAdapter(ABC):
             formats=self.supported_formats,
         )
 
+    def warmup(self, profile: RuntimeProfile) -> None:
+        """Load model resources without synthesizing user text."""
+        return None
+
     @abstractmethod
     def synthesize(self, request: TtsRequest, profile: RuntimeProfile) -> TtsResult:
         """Synthesize text into playable audio bytes."""

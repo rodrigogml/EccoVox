@@ -21,3 +21,10 @@
 - Contexto, vocabulário e normalização explícita de termos.
 - Cache persistente de modelos e reutilização em servidor aquecido.
 - Gerenciamento de processo e serviço Windows.
+## Unreleased
+
+- Elevado o TTS local com cache persistente de pipelines Kokoro, warm-up no modo servidor e segmentação de textos longos.
+- Adicionado suporte consistente a WAV/FLAC/OGG e MP3 por encoder FFmpeg local, com health degradado quando o encoder não está disponível.
+- Adicionados device CUDA/CPU, modelo, caminho do encoder e limites de segmento à configuração pública.
+- Adicionado configurador modular com menus para instalação, processo, serviço, rede, STT, TTS, vozes, FFmpeg e diagnóstico.
+- Adicionada edição TOML tipada, atômica e recuperável, preservando campos desconhecidos e limitando backups locais.

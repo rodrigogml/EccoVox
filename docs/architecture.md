@@ -69,4 +69,19 @@ Streaming e conversação live ficam fora do MVP. A arquitetura deve reservar no
 - Engines nunca vazam erro bruto para consumidor.
 - Logs não registram áudio, texto sensível integral ou segredos.
 - Modo servidor e modo CLI têm expectativas de performance separadas.
+- TTS mantém pipelines aquecidos por idioma, voz e device; codificação MP3 usa
+  encoder local e não altera a política de privacidade.
 - Consumidores cuidam de autenticação, autorização, sessão, UI e histórico.
+
+## Gerenciamento local
+
+- `eccovox.ps1` e `eccovox.sh` são os pontos de entrada estáveis para automação e
+  operação humana.
+- `scripts/manage.py` contém operações não interativas de instalação, processo,
+  serviço e diagnóstico, preservando compatibilidade com comandos existentes.
+- `scripts/manager_config.py` mantém o contrato tipado de configuração e as gravações
+  atômicas com backup limitado.
+- `scripts/manager_menu.py` organiza apenas navegação e interação em seções; nenhuma
+  regra de processo, serviço ou persistência deve ser duplicada nos menus.
+- Novas áreas entram como uma seção de menu e uma operação não interativa testável.
+  A interface nunca deve exigir o menu para automações.

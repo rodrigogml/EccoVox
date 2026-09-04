@@ -24,4 +24,8 @@ def tts_adapter(config: RuntimeConfiguration) -> TtsEngineAdapter:
 
     if config.tts.engine == "fake-tts":
         return FakeTtsEngineAdapter()
-    return KokoroTtsEngineAdapter(model_cache_dir=config.runtime.model_cache_dir)
+    return KokoroTtsEngineAdapter(
+        model_cache_dir=config.runtime.model_cache_dir,
+        encoder_path=config.tts.encoder_path,
+        max_segment_chars=config.tts.max_segment_chars,
+    )

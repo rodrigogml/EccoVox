@@ -1,7 +1,7 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('install','start','stop','kill','restart','status','run','service-install','service-remove','service-start','service-stop','service-restart','service-status')]
-    [string]$Command = 'status',
+    [ValidateSet('menu','doctor','configure','config-show','voices','ffmpeg-status','ffmpeg-detect','install','start','stop','kill','restart','status','run','service-install','service-remove','service-start','service-stop','service-restart','service-status')]
+    [string]$Command = 'menu',
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Arguments
 )
@@ -11,7 +11,7 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $venvPython = Join-Path $root '.venv\Scripts\python.exe'
 $manager = Join-Path $root 'scripts\manage.py'
 
-if ($Command -eq 'install' -and -not (Test-Path -LiteralPath $venvPython)) {
+if ($Command -in @('install','menu','doctor','configure','config-show','voices','ffmpeg-status','ffmpeg-detect') -and -not (Test-Path -LiteralPath $venvPython)) {
     $bootstrapPython = (Get-Command python -ErrorAction Stop).Source
     & $bootstrapPython $manager $Command @Arguments
 } else {

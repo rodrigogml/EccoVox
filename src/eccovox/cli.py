@@ -31,7 +31,9 @@ def serve(
         runtime_config = with_server_overrides(load_configuration(config), host=host, port=port)
     except EccoVoxError as exc:
         _exit_with_error(exc)
-    uvicorn.run(create_app(SpeechRuntime(runtime_config)), host=runtime_config.server.host, port=runtime_config.server.port)
+    runtime = SpeechRuntime(runtime_config)
+    runtime.warmup()
+    uvicorn.run(create_app(runtime), host=runtime_config.server.host, port=runtime_config.server.port)
 
 
 @app.command()

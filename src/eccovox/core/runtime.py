@@ -89,6 +89,11 @@ class SpeechRuntime:
         with self._tts_limiter.acquire():
             return self._tts_engine.synthesize(request, profile)
 
+    def warmup(self) -> None:
+        """Warm configured engines for persistent server mode."""
+        if self.config.tts.enabled and self.config.tts.warmup:
+            self._tts_engine.warmup(tts_profile(self.config, TtsRequest(input_text="warmup")))
+
     def _stt_health(self) -> CapabilityHealth:
         if not self.config.stt.enabled:
             return CapabilityHealth(status=CapabilityStatusEnum.DISABLED, safe_message="STT capability is disabled by configuration.")

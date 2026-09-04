@@ -21,3 +21,8 @@ reiniciar, consultar e administrar o serviço. No Linux, a integração suportad
 serviço systemd de sistema; não improvise unidades ou comandos paralelos. O arquivo
 real de configuração é resolvido a partir da raiz do projeto. Não finalize PIDs sem
 validar que pertencem a uma instância EccoVox registrada.
+
+Sem argumentos, os wrappers abrem o menu modular. Mantenha operações automatizáveis
+em `scripts/manage.py`, edição tipada e atômica em `scripts/manager_config.py` e apenas
+navegação/interação em `scripts/manager_menu.py`. Toda nova seção de menu deve possuir
+uma operação não interativa equivalente e testes próprios.

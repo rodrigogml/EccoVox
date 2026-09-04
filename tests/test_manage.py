@@ -16,6 +16,11 @@ def test_start_shouldRejectHealthFromAnotherProcess(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(manage, "DEFAULT_STATE_DIR", state_file.parent)
     monkeypatch.setattr(manage, "LOG_DIR", log_dir)
     monkeypatch.setattr(manage, "require_installation", lambda: None)
+    monkeypatch.setattr(
+        manage,
+        "service_status_payload",
+        lambda **_kwargs: {"status": "stopped"},
+    )
     monkeypatch.setattr(manage, "wait_health", lambda _timeout: True)
     monkeypatch.setattr(manage, "process_create_time", lambda _pid: 1.0)
     monkeypatch.setattr(manage.time, "sleep", lambda _seconds: None)
@@ -108,6 +113,34 @@ def test_windows_service_python_path_contains_pywin32_and_project(
     assert str((site / "win32" / "lib").resolve()) in paths
     assert str((site / "pythonwin").resolve()) in paths
     assert str((root / "src").resolve()) in paths
+
+
+def test_start_rejects_parallel_process_when_service_is_running(monkeypatch) -> None:
+    import scripts.manage as manage
+
+    monkeypatch.setattr(manage, "read_state", lambda: None)
+    monkeypatch.setattr(manage, "require_installation", lambda: None)
+    monkeypatch.setattr(
+        manage,
+        "service_status_payload",
+        lambda **_kwargs: {"status": "running"},
+    )
+
+    with pytest.raises(RuntimeError, match="serviço EccoVox já está ativo"):
+        manage.start()
+
+
+def test_service_start_rejects_parallel_managed_process(monkeypatch) -> None:
+    import scripts.manage as manage
+
+    monkeypatch.setattr(
+        manage,
+        "process_status_payload",
+        lambda: {"status": "running"},
+    )
+
+    with pytest.raises(RuntimeError, match="processo local EccoVox já está ativo"):
+        manage.service_control("start")
 
 
 @pytest.mark.skipif(

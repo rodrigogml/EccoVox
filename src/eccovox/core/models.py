@@ -88,6 +88,11 @@ class TtsConfig:
     voice: str = "pf_dora"
     language: str = "pt-BR"
     response_format: str = "mp3"
+    device: str = "cpu"
+    model: str = "kokoro-v1.0"
+    encoder_path: str | None = None
+    warmup: bool = True
+    max_segment_chars: int = 500
     max_text_chars: int = 4_000
     short_text_start_budget_millis: int = 2_000
     max_concurrent: int = 1

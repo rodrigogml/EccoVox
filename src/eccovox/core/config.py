@@ -40,7 +40,7 @@ def load_configuration(config_path: Path | str | None = None) -> RuntimeConfigur
     server = _server_config(data.get("server", {}))
     runtime = _runtime_config(data.get("runtime", {}), path.parent.resolve())
     stt = _stt_config(data.get("stt", {}))
-    tts = _tts_config(data.get("tts", {}))
+    tts = _tts_config(data.get("tts", {}), path.parent.resolve())
     return validate_configuration(RuntimeConfiguration(server=server, runtime=runtime, stt=stt, tts=tts))
 
 
@@ -54,6 +54,7 @@ def validate_configuration(config: RuntimeConfiguration) -> RuntimeConfiguration
         raise EccoVoxError(ErrorCodeEnum.INVALID_OVERRIDE, "Default profile is not listed in configured profiles.")
     _validate_capability_limits("stt", config.stt.max_audio_bytes, config.stt.max_concurrent, config.stt.queue_size)
     _validate_capability_limits("tts", config.tts.max_text_chars, config.tts.max_concurrent, config.tts.queue_size)
+    _require_positive("tts.max_segment_chars", config.tts.max_segment_chars)
     return config
 
 
@@ -91,7 +92,9 @@ def tts_profile(config: RuntimeConfiguration, request: TtsRequest) -> RuntimePro
         voice=request.voice or config.tts.voice,
         language=request.language or config.tts.language,
         response_format=request.response_format or config.tts.response_format,
-        speed=request.speed,
+        speed=request.speed or (0.95 if profile_name == "premium" else 1.0),
+        model=config.tts.model,
+        device=config.tts.device,
     )
 
 
@@ -144,7 +147,11 @@ def _stt_config(data: dict[str, Any]) -> SttConfig:
     )
 
 
-def _tts_config(data: dict[str, Any]) -> TtsConfig:
+def _tts_config(data: dict[str, Any], base_dir: Path | None = None) -> TtsConfig:
+    encoder_value = data.get("encoder_path")
+    encoder_path = None
+    if encoder_value:
+        encoder_path = str(_resolved_path(base_dir or Path.cwd(), encoder_value))
     return TtsConfig(
         enabled=bool(data.get("enabled", True)),
         engine=str(data.get("engine", "kokoro")),
@@ -152,6 +159,11 @@ def _tts_config(data: dict[str, Any]) -> TtsConfig:
         voice=str(data.get("voice", "pf_dora")),
         language=str(data.get("language", "pt-BR")),
         response_format=str(data.get("response_format", "mp3")),
+        device=str(data.get("device", "cpu")),
+        model=str(data.get("model", "kokoro-v1.0")),
+        encoder_path=encoder_path,
+        warmup=bool(data.get("warmup", True)),
+        max_segment_chars=int(data.get("max_segment_chars", 500)),
         max_text_chars=int(data.get("max_text_chars", 4_000)),
         short_text_start_budget_millis=int(data.get("short_text_start_budget_millis", 2_000)),
         max_concurrent=int(data.get("max_concurrent", 1)),
