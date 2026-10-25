@@ -196,6 +196,10 @@ def update_configuration(
     backup_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     backup = backup_dir / f"eccovox-{stamp}.toml"
+    sequence = 1
+    while backup.exists():
+        backup = backup_dir / f"eccovox-{stamp}-{sequence}.toml"
+        sequence += 1
     shutil.copy2(path, backup)
     _purge_backups(backup_dir, keep=5)
 
